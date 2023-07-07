@@ -1,12 +1,14 @@
 ﻿namespace Averus.Dota2.DataScraper
 {
+    using Averus.Dota2.DataScraper.Game;
     using Averus.Dota2.DataScraper.Utils;
+    using Newtonsoft.Json;
     using OpenDotaApi;
     using System.Net;
 
     internal class Program
     {
-
+        private static readonly string DataDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
 
         static async Task Main(string[] args)
         {
@@ -19,9 +21,37 @@
 
             using var openDota = new OpenDota(context.Id.ToString());
 
-            var data = await openDota.Heroes.GetDataAsync();
+            var heroes = await openDota.Heroes.GetDataAsync();
 
-            Console.WriteLine();
+            if (!Directory.Exists(DataDirectory))
+            {
+                Directory.CreateDirectory(DataDirectory);
+            }
+
+            File.WriteAllText(Path.Combine(DataDirectory, "hero_base.json"), JsonConvert.SerializeObject(heroes));
+
+            // Grouped by positions
+            List<(int, int)> heroByPos = new List<(int, int)>();
+
+            for (int i = 1; i <= 5; i++)
+            {
+                var pos = i;
+                foreach (var hero in heroes)
+                {
+                    var positions = Teambuilding.GetTeamPosition(hero.Roles);
+                    if (positions.Any(x => x == i))
+                    {
+                        heroByPos.Add(((int)hero.Id, pos));
+                    }
+                }
+            }
+
+            var projection = heroByPos.GroupBy(x => x.Item2, element => element.Item1).ToArray();
+
+
+            File.WriteAllText(Path.Combine(DataDirectory, "hero_pos.json"), JsonConvert.SerializeObject(projection));
+
+            Console.ReadLine();
         }
 
         public class SteamContext
