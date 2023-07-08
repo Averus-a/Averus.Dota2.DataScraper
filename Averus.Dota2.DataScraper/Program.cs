@@ -1,6 +1,7 @@
 ﻿namespace Averus.Dota2.DataScraper
 {
     using Averus.Dota2.DataScraper.Game;
+    using Averus.Dota2.DataScraper.Lua;
     using Averus.Dota2.DataScraper.Utils;
     using Newtonsoft.Json;
     using OpenDotaApi;
@@ -29,6 +30,17 @@
             }
 
             File.WriteAllText(Path.Combine(DataDirectory, "hero_base.json"), JsonConvert.SerializeObject(heroes));
+
+            StringWriter sw = new();
+            using (var luaWriter = new LuaJsonWriter(sw))
+            {
+                luaWriter.Formatting = Formatting.Indented;
+
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Serialize(luaWriter, heroes);
+            }
+
+            var str = sw.ToString();
 
             // Grouped by positions
             List<(int, int)> heroByPos = new List<(int, int)>();
